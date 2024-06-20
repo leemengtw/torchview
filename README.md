@@ -136,6 +136,7 @@ def draw_graph(
     hide_inner_tensors: bool = True,
     roll: bool = False,
     show_shapes: bool = True,
+    show_module_alias: bool = True,
     save_graph: bool = False,
     filename: str | None = None,
     directory: str = '.',
@@ -231,6 +232,11 @@ def draw_graph(
 
         show_shapes (bool):
             True => Show shape of tensor, input, and output
+            False => Dont show
+            Default: True
+        
+        show_module_alias (bool):
+            True => Show alias of modules which defined in the parent module
             False => Dont show
             Default: True
 

@@ -47,6 +47,7 @@ def draw_graph(
     hide_inner_tensors: bool = True,
     roll: bool = False,
     show_shapes: bool = True,
+    show_module_alias: bool = True,
     save_graph: bool = False,
     filename: str | None = None,
     directory: str = '.',
@@ -144,6 +145,11 @@ def draw_graph(
             True => Show shape of tensor, input, and output
             False => Dont show
             Default: True
+        
+        show_module_alias (bool):
+            True => Show alias of modules which defined in the parent module
+            False => Dont show
+            Default: True
 
         save_graph (bool):
             True => Saves output file of graphviz graph
@@ -219,7 +225,7 @@ def draw_graph(
 
     forward_prop(
         model, input_recorder_tensor, device, model_graph,
-        model_mode, **kwargs_record_tensor
+        model_mode, show_module_alias=show_module_alias, **kwargs_record_tensor
     )
 
     model_graph.fill_visual_graph()
@@ -235,6 +241,7 @@ def forward_prop(
     device: torch.device | str,
     model_graph: ComputationGraph,
     mode: str,
+    show_module_alias: bool = True,
     **kwargs: Any,
 ) -> None:
     '''Performs forward propagation of model on RecorderTensor
@@ -249,7 +256,10 @@ def forward_prop(
             raise RuntimeError(
                 f"Specified model mode not recognized: {mode}"
             )
-        new_module_forward = module_forward_wrapper(model_graph)
+        new_module_forward = module_forward_wrapper(
+            model_graph=model_graph,
+            show_module_alias=show_module_alias,
+        )
         with Recorder(_orig_module_forward, new_module_forward, model_graph):
             with torch.no_grad():
                 if isinstance(x, (list, tuple)):

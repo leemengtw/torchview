@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Iterable, Mapping, TypeVar
 from collections.abc import Callable
 
+import inspect
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -89,7 +90,10 @@ def creation_ops_wrapper(
     return _func
 
 
-def module_forward_wrapper(model_graph: ComputationGraph) -> Callable[..., Any]:
+def module_forward_wrapper(
+        model_graph: ComputationGraph, 
+        show_module_alias: bool = True,
+) -> Callable[..., Any]:
     '''Wrapper for forward functions of modules'''
     def _module_forward_wrapper(mod: nn.Module, *args: Any, **kwargs: Any) -> Any:
         '''Forward prop of module for RecorderTensor subclass
@@ -112,9 +116,28 @@ def module_forward_wrapper(model_graph: ComputationGraph) -> Callable[..., Any]:
         # Create module_node and connect to its parents tensor node
         cur_depth = next(iter(input_nodes)).depth
         input_context = next(iter(input_nodes)).context
+
+        # Try to infer module's local reference name (i.e., alias) in parent module
+        mod_name = type(mod).__name__
+        if show_module_alias:
+            mod_alias = None
+            possible_caller_frames = [f for f in inspect.stack() if f.function == "forward"]
+            if possible_caller_frames:
+                caller_frame = possible_caller_frames[0]
+
+                parent_locals = caller_frame.frame.f_locals
+                parent_mod = parent_locals["self"]
+                for n, c in parent_mod.named_children():
+                    if c is mod:
+                        mod_alias = n
+                        break
+
+                if mod_alias:
+                    mod_name = type(mod).__name__ + f" ({mod_alias})"
+
         cur_node = ModuleNode(
             mod, cur_depth, input_nodes,  # type: ignore[arg-type]
-            name=type(mod).__name__
+            name=mod_name
         )
         cur_node.set_input_shape(
             reduce_data_info([args, kwargs], collect_shape, [])
