@@ -132,6 +132,18 @@ def module_forward_wrapper(
                         mod_alias = n
                         break
 
+                # try finding matching module in children's children. The parent could be a container-like module.
+                # e.g., when `self.layers` is defined as a list, nn.Sequential or nn.ModuleList and mod is one of the element in `self.layers`
+                if not mod_alias:
+                    for n1, c1 in parent_mod.named_children():
+                        try:
+                            for n2, c2 in c1.named_children():
+                                if c2 is mod:
+                                    mod_alias = f"{n1}.{n2}"
+                                    break
+                        except:
+                            pass
+
                 if mod_alias:
                     mod_name = type(mod).__name__ + f" ({mod_alias})"
 
